@@ -13,7 +13,7 @@ const CymaticVisualizer = () => {
   const [canvasBackground, setCanvasBackground] = useState("#202123");
   const [drawingColor, setDrawingColor] = useState("#F7F7F8");
   const [frequency, setFrequency] = useState(440);  // Default frequency
-  const [visualizerType, setVisualizerType] = useState('cymatic'); // Current visualizer type
+  const [visualizerType, setVisualizerType] = useState('cymatic3D'); // Current visualizer type
 
   useEffect(() => {
     const sketch = (p) => {
@@ -25,7 +25,7 @@ const CymaticVisualizer = () => {
         p.noFill();
         p.strokeWeight(2);
 
-        // Set up camera controls
+        // Set up camera controls for 3D
         let fov = 20;
         let cameraZ = (p.height / 2.0) / p.tan(p.PI * fov / 360.0);
         p.perspective(fov, p.width / p.height, cameraZ / 10.0, cameraZ * 10.0);
@@ -48,8 +48,10 @@ const CymaticVisualizer = () => {
           setFrequency(dominantFrequency * (audioContextRef.current.sampleRate / 2) / bufferLength);
         }
 
-        if (visualizerType === 'cymatic') {
-          renderCymatic(p, penPositions, backwardSpeed);
+        if (visualizerType === 'cymatic3D') {
+          renderCymatic3D(p, penPositions, backwardSpeed);
+        } else if (visualizerType === 'cymatic2D') {
+          renderCymatic2D(p);
         } else if (visualizerType === 'waveform') {
           renderWaveform(p);
         }
@@ -59,7 +61,7 @@ const CymaticVisualizer = () => {
         p.resizeCanvas(p.windowWidth, p.windowHeight);
       };
 
-      const renderCymatic = (p, penPositions, backwardSpeed) => {
+      const renderCymatic3D = (p, penPositions, backwardSpeed) => {
         let amplitude = p.map(p.sin(p.frameCount * (frequency / 100)), -1, 1, 50, 200);
         let angle = p.frameCount * (frequency / 100);
         let nextPenPosition = p.createVector(amplitude * p.cos(angle), amplitude * p.sin(angle), 0);
@@ -87,6 +89,34 @@ const CymaticVisualizer = () => {
           p.curveVertex(x, y, z);
         }
         p.endShape();
+      };
+
+      const renderCymatic2D = (p) => {
+        const gridSize = 100;  // Reduced resolution for better performance
+        const scale = 50;      // Scaling factor for wave propagation
+        
+        // Create a simplified wave pattern based on the frequency
+        const x = Array.from({ length: gridSize }, (_, i) => (i / gridSize) * 2 * scale - scale);
+        const y = Array.from({ length: gridSize }, (_, i) => (i / gridSize) * 2 * scale - scale);
+      
+        p.clear();
+        p.background(canvasBackground);
+      
+        p.push();
+        p.translate(-p.width / 2, -p.height / 2);
+      
+        // Use a simpler approach by mapping the frequency to a sine wave
+        for (let xi of x) {
+          for (let yi of y) {
+            // Map the distance from the center to the frequency
+            const value = Math.sin(frequency * Math.sqrt(xi * xi + yi * yi) / 10); // Adjust divisor to control wave spread
+            const color = p.map(value, -1, 1, 0, 255);
+            p.stroke(color, 100, 150);
+            p.point((xi + scale) * (p.width / (2 * scale)), (yi + scale) * (p.height / (2 * scale))); // Adjust scale to fit canvas
+          }
+        }
+      
+        p.pop();
       };
 
       const renderWaveform = (p) => {
@@ -175,10 +205,16 @@ const CymaticVisualizer = () => {
       </div>
       <div className="flex justify-center items-center mb-5">
         <button
-          onClick={() => setVisualizerType('cymatic')}
-          className={`px-4 py-2 ${visualizerType === 'cymatic' ? 'bg-blue-600 text-white' : 'bg-gray-200'} rounded mx-1`}
+          onClick={() => setVisualizerType('cymatic3D')}
+          className={`px-4 py-2 ${visualizerType === 'cymatic3D' ? 'bg-blue-600 text-white' : 'bg-gray-200'} rounded mx-1`}
         >
-          Cymatic
+          3D Cymatic
+        </button>
+        <button
+          onClick={() => setVisualizerType('cymatic2D')}
+          className={`px-4 py-2 ${visualizerType === 'cymatic2D' ? 'bg-blue-600 text-white' : 'bg-gray-200'} rounded mx-1`}
+        >
+          2D Cymatic
         </button>
         <button
           onClick={() => setVisualizerType('waveform')}
@@ -200,3 +236,4 @@ const CymaticVisualizer = () => {
 };
 
 export default CymaticVisualizer;
+
